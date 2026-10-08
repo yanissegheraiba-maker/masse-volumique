@@ -1,0 +1,460 @@
+<title>Labo masse volumique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Concept : une paillasse virtuelle. Verrerie dessinée à l'échelle à gauche, balance à lecture numérique à droite, fiche de résultats dessous. */
+:root{
+  --bg:#edf1f4; --panel:#ffffff; --ink:#0f1f2c; --muted:#4a5d6d; --line:#cbd6de;
+  --accent:#0b6e8c; --accent-ink:#ffffff; --warm:#b45309;
+  --ok:#17663a; --bad:#a32020; --okbg:#e5f3ea; --badbg:#fbeaea;
+  --liquid:#cfe6ef; --liquid-edge:#4f90a8; --glass:#7f97a8; --obj:#8c98a3; --lcd-bg:#10222b; --lcd-fg:#7bf0c0;
+  --c-eau:#6fb3e0; --c-ethanol:#e8a0c0; --c-huile:#f0cd45; --c-glycerol:#8fd19e;
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c161e; --panel:#142230; --ink:#e8eff5; --muted:#a2b4c3; --line:#2a3d4f;
+    --accent:#5cc3e0; --accent-ink:#06222c; --warm:#f5a65b;
+    --ok:#7fdca0; --bad:#ff9a9a; --okbg:#12301f; --badbg:#3a1717;
+    --liquid:#27506a; --liquid-edge:#7cc4de; --glass:#6f889a; --obj:#9aa7b3; --lcd-bg:#061218; --lcd-fg:#7bf0c0;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c161e; --panel:#142230; --ink:#e8eff5; --muted:#a2b4c3; --line:#2a3d4f;
+  --accent:#5cc3e0; --accent-ink:#06222c; --warm:#f5a65b;
+  --ok:#7fdca0; --bad:#ff9a9a; --okbg:#12301f; --badbg:#3a1717;
+  --liquid:#27506a; --liquid-edge:#7cc4de; --glass:#6f889a; --obj:#9aa7b3; --lcd-bg:#061218; --lcd-fg:#7bf0c0;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-size:16.5px;line-height:1.5;padding-inline:16px}
+main{max-width:820px;margin:0 auto;padding-block:20px 56px}
+h1{font-size:1.6rem;line-height:1.15;margin:0 0 4px;font-weight:700;text-wrap:balance}
+h2{font-size:1.05rem;margin:0 0 8px;font-weight:600}
+.lead{margin:0 0 16px;color:var(--muted)}
+.who{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-bottom:14px}
+.who label{font-weight:600}
+.who small{color:var(--muted);flex-basis:100%}
+input[type=text],input[type=number],select{font:inherit;color:var(--ink);background:var(--panel);border:1.5px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0}
+input[type=text]{width:220px;max-width:100%}
+input[type=number]{width:130px;font-family:"IBM Plex Mono",ui-monospace,monospace}
+select{max-width:100%}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+details.ref{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:14px}
+details.ref summary{cursor:pointer;font-weight:600}
+.tablewrap{overflow-x:auto;margin-top:8px}
+table.t{border-collapse:collapse;width:100%;font-size:.95rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left}
+table.t td.n,table.t th.n{text-align:right;font-family:"IBM Plex Mono",ui-monospace,monospace}
+.rels{display:flex;flex-wrap:wrap;gap:6px 22px;margin:6px 0 0;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--line);margin-bottom:14px;overflow-x:auto}
+.tabs button{font:inherit;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:4px solid transparent;margin-bottom:-2px;padding:10px 12px;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+section[hidden]{display:none}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.seg button,.btn{font:inherit;font-weight:600;border-radius:6px;border:1.5px solid var(--accent);padding:8px 14px;cursor:pointer;background:var(--panel);color:var(--ink)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.bench{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:520px){.bench{grid-template-columns:1fr}}
+.bench svg{width:100%;max-width:200px;height:auto;display:block;margin:0 auto}
+.lcd{background:var(--lcd-bg);color:var(--lcd-fg);font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:600;font-size:2rem;text-align:right;padding:10px 14px;border-radius:8px;border:3px solid var(--line);margin-bottom:10px;letter-spacing:.04em}
+.lcd small{font-size:1rem;margin-left:6px}
+.hint{color:var(--muted);font-size:.93rem;margin:6px 0 0}
+.field{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-bottom:10px}
+.field label{flex:1 1 100%;font-weight:600}
+.field .unit{color:var(--muted)}
+.fb{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:6px}
+.fb li{padding:8px 10px;border-radius:6px;border:1px solid var(--line)}
+.fb li.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+.fb li.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.card{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;margin:0 0 10px}
+.card dt{color:var(--muted)}
+.card dd{margin:0;font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px}
+.stage{display:grid;place-items:center;margin:10px 0}
+.stage svg{width:100%;max-width:260px;height:auto}
+.prof{border:2px dashed var(--warm)}
+.prof p{margin:4px 0}
+svg text{fill:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+</style>
+<main>
+  <h1>Labo masse volumique</h1>
+  <p class="lead">Une paillasse virtuelle : tu mesures une masse et un volume, tu calcules ρ, puis tu identifies l'espèce chimique.</p>
+
+  <div class="who">
+    <label for="prenom">Ton prénom</label>
+    <input id="prenom" type="text" autocomplete="off" placeholder="par exemple : Lina">
+    <small id="prenomHint">Tes échantillons dépendent de ton prénom. Écris-le comme sur ta fiche. Sans prénom, ce sont des valeurs d'exemple.</small>
+  </div>
+
+  <details class="ref" open>
+    <summary>Relations du cours et table de référence</summary>
+    <p class="rels"><span>ρ = m / V</span><span>d = ρ / ρ(eau)</span><span>1 mL = 10⁻³ L</span></p>
+    <p class="hint">ρ en g·L⁻¹, m en g, V en L. La densité d n'a pas d'unité.</p>
+    <div class="tablewrap"><table class="t" id="reftable"></table></div>
+  </details>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab1" aria-selected="true" aria-controls="p1">1 · Liquides</button>
+    <button role="tab" id="tab2" aria-selected="false" aria-controls="p2">2 · Solides</button>
+    <button role="tab" id="tab3" aria-selected="false" aria-controls="p3">3 · Mélanges et flottaison</button>
+    <button role="tab" id="tab4" aria-selected="false" aria-controls="p4">4 · Enquête</button>
+  </div>
+
+  <!-- 1 LIQUIDES -->
+  <section id="p1" role="tabpanel" aria-labelledby="tab1">
+    <div class="panel">
+      <div class="seg" id="segL" role="group" aria-label="Choisir un liquide"></div>
+      <div class="bench">
+        <div id="cyl1"></div>
+        <div>
+          <div class="lcd" id="lcd1" aria-live="polite">0,0<small>g</small></div>
+          <div class="seg">
+            <button type="button" class="btn" id="w1a">Peser l'éprouvette vide</button>
+            <button type="button" class="btn" id="w1b">Peser éprouvette + liquide</button>
+          </div>
+          <p class="hint">Lis le volume au bas du ménisque, l'œil au niveau du liquide. Un petit trait vaut 2 mL.</p>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Mes résultats pour ce liquide</h2>
+      <div id="f1"></div>
+      <button class="btn primary" id="chk1" type="button">Vérifier mes résultats</button>
+      <ul class="fb" id="fb1" aria-live="polite"></ul>
+    </div>
+  </section>
+
+  <!-- 2 SOLIDES -->
+  <section id="p2" role="tabpanel" aria-labelledby="tab2" hidden>
+    <div class="panel">
+      <div class="seg" id="segS" role="group" aria-label="Choisir un objet"></div>
+      <div class="bench">
+        <div id="cyl2"></div>
+        <div>
+          <div class="seg">
+            <button type="button" class="btn" id="dip0">Avant : eau seule</button>
+            <button type="button" class="btn" id="dip1">Après : objet plongé</button>
+          </div>
+          <div class="lcd" id="lcd2" aria-live="polite">0,0<small>g</small></div>
+          <p class="hint">Le volume de l'objet est le volume d'eau qu'il déplace. Pèse l'objet, lis le niveau de l'eau avant puis après.</p>
+          <div class="seg"><button type="button" class="btn" id="w2">Peser l'objet sec</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Mes résultats pour cet objet</h2>
+      <div id="f2"></div>
+      <button class="btn primary" id="chk2" type="button">Vérifier mes résultats</button>
+      <ul class="fb" id="fb2" aria-live="polite"></ul>
+    </div>
+  </section>
+
+  <!-- 3 MELANGES / FLOTTAISON -->
+  <section id="p3" role="tabpanel" aria-labelledby="tab3" hidden>
+    <div class="panel">
+      <h2>A · Mélanger deux liquides</h2>
+      <p class="hint" style="margin-top:0">Choisis deux liquides, fais tes prédictions avec la table de référence, puis teste.</p>
+      <div id="f3a"></div>
+      <button class="btn primary" id="chk3a" type="button">Mélanger et vérifier</button>
+      <div class="stage" id="stage3a"></div>
+      <ul class="fb" id="fb3a" aria-live="polite"></ul>
+    </div>
+    <div class="panel">
+      <h2>B · Plonger un objet dans un liquide</h2>
+      <p class="hint" style="margin-top:0">On néglige la fusion de la glace (0 °C).</p>
+      <div id="f3b"></div>
+      <button class="btn primary" id="chk3b" type="button">Plonger et vérifier</button>
+      <div class="stage" id="stage3b"></div>
+      <ul class="fb" id="fb3b" aria-live="polite"></ul>
+    </div>
+  </section>
+
+  <!-- 4 ENQUETE -->
+  <section id="p4" role="tabpanel" aria-labelledby="tab4" hidden>
+    <div class="panel">
+      <p style="margin-top:0">Deux flacons ont perdu leur étiquette. On a mesuré, pour chacun, la masse d'un volume connu et la température d'ébullition. À toi de conclure.</p>
+      <div class="seg" id="segE" role="group" aria-label="Choisir un flacon"></div>
+      <dl class="card" id="card4"></dl>
+    </div>
+    <div class="panel">
+      <h2>Mes conclusions pour ce flacon</h2>
+      <div id="f4"></div>
+      <button class="btn primary" id="chk4" type="button">Vérifier mes résultats</button>
+      <ul class="fb" id="fb4" aria-live="polite"></ul>
+    </div>
+  </section>
+
+  <section id="prof" class="panel prof" hidden></section>
+</main>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s);};
+  function norm(s){return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ');}
+  function hash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+  function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function shuffle(arr,r){arr=arr.slice();for(var i=arr.length-1;i>0;i--){var j=Math.floor(r()*(i+1));var t=arr[i];arr[i]=arr[j];arr[j]=t;}return arr;}
+  function fmt(x,dec){return x.toLocaleString('fr-FR',{minimumFractionDigits:dec,maximumFractionDigits:dec});}
+  function num(id){var el=$(id);if(!el)return null;var v=el.value.replace(/[\s  ]/g,'').replace(',','.');if(v==='')return null;var n=parseFloat(v);return isNaN(n)?null:n;}
+  function near(a,b,tol){return Math.abs(a-b)<=tol*Math.abs(b);}
+
+  var SP={
+    ethanol:{nom:'Éthanol',rho:789,teb:78},
+    huile:{nom:'Huile de tournesol',rho:920,teb:null},
+    eau:{nom:'Eau',rho:1000,teb:100},
+    glycerol:{nom:'Glycérol',rho:1260,teb:290},
+    glace:{nom:'Glace',rho:917},
+    aluminium:{nom:'Aluminium',rho:2700},
+    fer:{nom:'Fer',rho:7870},
+    cuivre:{nom:'Cuivre',rho:8960},
+    plomb:{nom:'Plomb',rho:11340}
+  };
+  var COL={eau:'var(--c-eau)',ethanol:'var(--c-ethanol)',huile:'var(--c-huile)',glycerol:'var(--c-glycerol)'};
+  var OBJCOL={glace:'#bfe9f5',aluminium:'#b4bcc4',cuivre:'#c9743a',plomb:'#4a5058',fer:'#6b6f75'};
+  var ROWS=[['ethanol','liquide','78'],['huile','liquide','non indiquée'],['eau','liquide','100'],['glycerol','liquide','290'],['glace','solide','—'],['aluminium','solide','—'],['fer','solide','—'],['cuivre','solide','—'],['plomb','solide','—']];
+
+  // table de référence
+  (function(){
+    var h='<tr><th>Espèce chimique</th><th>État</th><th class="n">ρ (g·L⁻¹)</th><th class="n">θéb (°C)</th></tr>';
+    ROWS.forEach(function(r){h+='<tr><td>'+SP[r[0]].nom+(r[0]==='glace'?' (eau solide, 0 °C)':'')+'</td><td>'+r[1]+'</td><td class="n">'+fmt(SP[r[0]].rho,0)+'</td><td class="n">'+r[2]+'</td></tr>';});
+    $('#reftable').innerHTML=h;
+  })();
+
+  // ---------- paramètres liés au prénom ----------
+  function params(){
+    var name=norm($('#prenom').value), r=mulberry(hash(name||'exemple'));
+    var Vs=[40,44,50,56,60,64,70,76,80,86,90];
+    var liq=shuffle(['ethanol','huile','eau','glycerol'],r).slice(0,3).map(function(k){
+      var V=Vs[Math.floor(r()*Vs.length)];
+      var mv=Math.round((55+r()*20)*10)/10;
+      var ml=Math.round(SP[k].rho*V/1000*10)/10;
+      return {k:k,V:V,mvide:mv,mliq:ml,mtot:Math.round((mv+ml)*10)/10};
+    });
+    var Vi=[40,44,50,56,60], Vo=[20,24,28,30,32,36,40];
+    var sol=shuffle(['aluminium','fer','cuivre','plomb'],r).slice(0,3).map(function(k){
+      var vo=Vo[Math.floor(r()*Vo.length)], vi=Vi[Math.floor(r()*Vi.length)];
+      if(vi+vo>96) vi=96-vo;
+      return {k:k,Vi:vi,Vo:vo,Vf:vi+vo,m:Math.round(SP[k].rho*vo/1000*10)/10};
+    });
+    var x=['eau','ethanol','glycerol'][Math.floor(r()*3)];
+    var ENQ=[
+      {lab:'Flacon X',k:x,V:100,m:{eau:100.0,ethanol:78.9,glycerol:126.0}[x],teb:SP[x].teb},
+      {lab:'Flacon Y',k:'eausalee',V:100,m:107.0,teb:102}
+    ];
+    return {name:name,L:liq,S:sol,E:ENQ};
+  }
+
+  // ---------- dessin ----------
+  function cyl(level,withObj,objColor){
+    var W=170,H=352,top=22,bot=326,x0=72,x1=132,i;
+    var Y=function(v){return bot-(bot-top)*v/100;};
+    var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Éprouvette graduée de 100 mL, niveau à lire">';
+    var yl=Y(level);
+    s+='<path d="M'+x0+' '+(yl-4)+' Q'+((x0+x1)/2)+' '+(yl+4)+' '+x1+' '+(yl-4)+' L'+x1+' '+bot+' L'+x0+' '+bot+' Z" fill="var(--liquid)"/>';
+    s+='<path d="M'+x0+' '+(yl-4)+' Q'+((x0+x1)/2)+' '+(yl+4)+' '+x1+' '+(yl-4)+'" fill="none" stroke="var(--liquid-edge)" stroke-width="2"/>';
+    if(withObj){s+='<rect x="'+(((x0+x1)/2)-15)+'" y="'+(bot-32)+'" width="30" height="30" rx="4" fill="var(--obj)" stroke="var(--ink)" stroke-width="1"/>';}
+    s+='<path d="M'+x0+' '+(top-6)+' V'+bot+' H'+x1+' V'+(top-6)+'" fill="none" stroke="var(--glass)" stroke-width="3"/>';
+    s+='<rect x="'+(x0-14)+'" y="'+bot+'" width="'+(x1-x0+28)+'" height="9" rx="3" fill="var(--glass)"/>';
+    for(i=0;i<=100;i+=2){
+      var y=Y(i), major=(i%10===0);
+      s+='<line x1="'+(major?x0-14:x0-7)+'" x2="'+x0+'" y1="'+y+'" y2="'+y+'" stroke="var(--ink)" stroke-width="'+(major?1.4:1)+'"/>';
+      if(major) s+='<text x="'+(x0-18)+'" y="'+(y+4)+'" text-anchor="end" font-size="12">'+i+'</text>';
+    }
+    s+='<text x="'+(x1+6)+'" y="'+(top+2)+'" font-size="12" fill="var(--muted)">mL</text>';
+    return s+'</svg>';
+  }
+  function tube(layers,obj){
+    var W=200,H=250,x0=50,x1=150,top=20,bot=220,i;
+    var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Tube à essais">';
+    var y=bot;
+    layers.forEach(function(l){var h=(bot-top)*l.h; y-=h; s+='<rect x="'+x0+'" y="'+y+'" width="'+(x1-x0)+'" height="'+h+'" fill="'+l.c+'"/>';});
+    if(obj){
+      var size=44, surf=bot-(bot-top)*obj.surf, ty;
+      if(obj.floats){ty=surf-(1-obj.sub)*size;} else {ty=bot-size-1;}
+      s+='<rect x="'+(100-size/2)+'" y="'+ty+'" width="'+size+'" height="'+size+'" rx="5" fill="'+obj.c+'" stroke="var(--ink)" stroke-width="1.5"/>';
+    }
+    s+='<path d="M'+x0+' '+(top-8)+' V'+bot+' Q'+x0+' '+(bot+22)+' 100 '+(bot+22)+' Q'+x1+' '+(bot+22)+' '+x1+' '+bot+' V'+(top-8)+'" fill="none" stroke="var(--glass)" stroke-width="3"/>';
+    return s+'</svg>';
+  }
+
+  // ---------- champs ----------
+  function fieldHTML(f){
+    var h='<div class="field"><label for="'+f.id+'">'+f.label+'</label>';
+    if(f.sel){h+='<select id="'+f.id+'"><option value="">Choisis…</option>'+f.sel.map(function(o){return '<option value="'+o[0]+'">'+o[1]+'</option>';}).join('')+'</select>';}
+    else{h+='<input id="'+f.id+'" type="number" step="any" inputmode="decimal">'+(f.unit?'<span class="unit">'+f.unit+'</span>':'');}
+    return h+'</div>';
+  }
+  var LIQOPT=[['ethanol','Éthanol'],['huile','Huile de tournesol'],['eau','Eau'],['glycerol','Glycérol']];
+  var IDOPT=LIQOPT.concat([['aucune','Aucune espèce du tableau']]);
+  var SOLOPT=[['glace','Glace'],['aluminium','Aluminium'],['fer','Fer'],['cuivre','Cuivre'],['plomb','Plomb']];
+  var FORMS={
+    f1:[{id:'l_v',label:'Volume lu dans l\'éprouvette',unit:'mL'},{id:'l_vl',label:'Volume converti',unit:'L'},{id:'l_m',label:'Masse du liquide seul',unit:'g'},{id:'l_rho',label:'Masse volumique calculée',unit:'g·L⁻¹'},{id:'l_id',label:'Espèce chimique identifiée',sel:IDOPT},{id:'l_d',label:'Densité',unit:''}],
+    f2:[{id:'s_vi',label:'Niveau de l\'eau avant',unit:'mL'},{id:'s_vf',label:'Niveau de l\'eau après',unit:'mL'},{id:'s_v',label:'Volume de l\'objet',unit:'mL'},{id:'s_vl',label:'Volume converti',unit:'L'},{id:'s_m',label:'Masse de l\'objet',unit:'g'},{id:'s_rho',label:'Masse volumique calculée',unit:'g·L⁻¹'},{id:'s_id',label:'Espèce chimique identifiée',sel:[['aluminium','Aluminium'],['fer','Fer'],['cuivre','Cuivre'],['plomb','Plomb'],['aucune','Aucune espèce du tableau']]},{id:'s_d',label:'Densité',unit:''}],
+    f3a:[{id:'x_a',label:'Premier liquide',sel:LIQOPT},{id:'x_b',label:'Second liquide',sel:LIQOPT},{id:'x_ph',label:'Ma prédiction : nombre de phases',sel:[['1','1 phase'],['2','2 phases']]},{id:'x_ty',label:'Ma prédiction : type de mélange',sel:[['homogene','Homogène'],['heterogene','Hétérogène']]},{id:'x_top',label:'Ma prédiction : ce qui est en haut',sel:[['a','Le premier liquide'],['b','Le second liquide'],['none','Rien : une seule phase']]}],
+    f3b:[{id:'y_o',label:'Objet',sel:SOLOPT},{id:'y_l',label:'Liquide',sel:[['ethanol','Éthanol'],['eau','Eau'],['glycerol','Glycérol']]},{id:'y_p',label:'Ma prédiction',sel:[['flotte','L\'objet flotte'],['coule','L\'objet coule']]}],
+    f4:[{id:'e_vl',label:'Volume converti',unit:'L'},{id:'e_rho',label:'Masse volumique calculée',unit:'g·L⁻¹'},{id:'e_d',label:'Densité',unit:''},{id:'e_nat',label:'Nature du contenu',sel:[['pur','Corps pur'],['melange','Mélange']]},{id:'e_esp',label:'Espèce chimique identifiée',sel:IDOPT}]
+  };
+  Object.keys(FORMS).forEach(function(k){$('#'+k).innerHTML=FORMS[k].map(fieldHTML).join('');});
+  function ids(k){return FORMS[k].map(function(f){return f.id;});}
+
+  var st={tab:1,liq:0,sol:0,enq:0};
+  var memo={};
+  function save(form,key){memo[form+key]={};ids(form).forEach(function(i){memo[form+key][i]=$('#'+i).value;});}
+  function load(form,key){var m=memo[form+key]||{};ids(form).forEach(function(i){$('#'+i).value=m[i]||'';});}
+  function clearAll(){memo={};Object.keys(FORMS).forEach(function(k){ids(k).forEach(function(i){$('#'+i).value='';});});['#fb1','#fb2','#fb3a','#fb3b','#fb4'].forEach(function(s){$(s).innerHTML='';});$('#stage3a').innerHTML='';$('#stage3b').innerHTML='';}
+
+  function seg(el,labels,cur,on){
+    el.innerHTML='';
+    labels.forEach(function(t,i){var b=document.createElement('button');b.type='button';b.textContent=t;b.setAttribute('aria-pressed',i===cur);b.onclick=function(){on(i);};el.appendChild(b);});
+  }
+  function lcd(el,v){el.innerHTML=(v===null?'— — —':fmt(v,1))+'<small>g</small>';}
+  function show(ul,items){ul.innerHTML='';items.forEach(function(it){var li=document.createElement('li');li.className=it.ok?'ok':'bad';li.innerHTML='<b>'+(it.ok?'Correct. ':'À revoir. ')+'</b>'+it.t;ul.appendChild(li);});}
+
+  // ---------- rendu des onglets ----------
+  function render(){
+    var P=params();
+    $('#prenomHint').textContent=P.name?'Échantillons calculés pour « '+$('#prenom').value.trim()+' ».':'Tes échantillons dépendent de ton prénom. Écris-le comme sur ta fiche. Sans prénom, ce sont des valeurs d\'exemple.';
+    if(st.tab===1){
+      seg($('#segL'),['Liquide A','Liquide B','Liquide C'],st.liq,function(i){save('f1',st.liq);st.liq=i;load('f1',i);$('#fb1').innerHTML='';lcd($('#lcd1'),null);render();});
+      var S=P.L[st.liq]; $('#cyl1').innerHTML=cyl(S.V,false);
+    }
+    if(st.tab===2){
+      seg($('#segS'),['Objet 1','Objet 2','Objet 3'],st.sol,function(i){save('f2',st.sol);st.sol=i;load('f2',i);$('#fb2').innerHTML='';lcd($('#lcd2'),null);st.dip=0;render();});
+      var O=P.S[st.sol]; $('#cyl2').innerHTML=st.dip?cyl(O.Vf,true):cyl(O.Vi,false);
+      $('#dip0').setAttribute('aria-pressed',!st.dip);$('#dip1').setAttribute('aria-pressed',!!st.dip);
+    }
+    if(st.tab===4){
+      seg($('#segE'),['Flacon X','Flacon Y'],st.enq,function(i){save('f4',st.enq);st.enq=i;load('f4',i);$('#fb4').innerHTML='';render();});
+      var E=P.E[st.enq];
+      $('#card4').innerHTML='<dt>Aspect</dt><dd>liquide incolore</dd><dt>Volume</dt><dd>V = '+fmt(E.V,1)+' mL</dd><dt>Masse</dt><dd>m = '+fmt(E.m,1)+' g</dd><dt>Ébullition</dt><dd>θéb = '+fmt(E.teb,0)+' °C</dd>';
+    }
+    renderProf();
+  }
+  function setTab(n){
+    st.tab=n;
+    for(var i=1;i<=4;i++){$('#p'+i).hidden=(i!==n);$('#tab'+i).setAttribute('aria-selected',i===n);}
+    render();
+  }
+  for(var q=1;q<=4;q++){(function(n){$('#tab'+n).onclick=function(){setTab(n);};})(q);}
+  $('#prenom').addEventListener('input',function(){clearAll();st.liq=0;st.sol=0;st.enq=0;st.dip=0;lcd($('#lcd1'),null);lcd($('#lcd2'),null);render();});
+
+  // balances
+  $('#w1a').onclick=function(){lcd($('#lcd1'),params().L[st.liq].mvide);};
+  $('#w1b').onclick=function(){lcd($('#lcd1'),params().L[st.liq].mtot);};
+  $('#w2').onclick=function(){lcd($('#lcd2'),params().S[st.sol].m);};
+  $('#dip0').onclick=function(){st.dip=0;render();};
+  $('#dip1').onclick=function(){st.dip=1;render();};
+
+  // ---------- vérifications ----------
+  function nearestId(rho,list){var best=null,bd=1e9;list.forEach(function(k){var d=Math.abs(rho-SP[k].rho)/SP[k].rho;if(d<bd){bd=d;best=k;}});return bd<=0.04?best:'aucune';}
+
+  $('#chk1').onclick=function(){
+    var S=params().L[st.liq],v=num('#l_v'),vl=num('#l_vl'),m=num('#l_m'),rho=num('#l_rho'),d=num('#l_d'),id=$('#l_id').value,it=[];
+    if(v===null||vl===null||m===null||rho===null||d===null||id===''){show($('#fb1'),[{ok:false,t:'Remplis toutes les cases avant de vérifier.'}]);return;}
+    it.push(Math.abs(v-S.V)<=1?{ok:true,t:'ta lecture du volume est cohérente avec le niveau du liquide.'}:{ok:false,t:'relis le volume au bas du ménisque. Un petit trait vaut 2 mL, un grand trait 10 mL.'});
+    it.push(near(vl,v*1e-3,0.02)?{ok:true,t:'la conversion de mL en L est juste.'}:{ok:false,t:'conversion : 1 mL = 10⁻³ L, donc V (L) = V (mL) × 10⁻³.'});
+    if(Math.abs(m-S.mliq)<=0.3) it.push({ok:true,t:'la masse du liquide seul est juste : m = m(éprouvette + liquide) − m(éprouvette vide).'});
+    else if(Math.abs(m-S.mtot)<=0.3) it.push({ok:false,t:'tu as pris la masse de l\'éprouvette pleine. Il faut retirer la masse de l\'éprouvette vide pour avoir la masse du liquide seul.'});
+    else it.push({ok:false,t:'calcule m = m(éprouvette + liquide) − m(éprouvette vide), avec les deux pesées de la balance.'});
+    if(near(rho,m/vl,0.03)) it.push({ok:true,t:'ρ = m / V est bien appliquée, avec V en litres.'});
+    else if(near(rho,m/v,0.03)) it.push({ok:false,t:'tu as divisé par le volume en mL. Pour obtenir des g·L⁻¹, le volume doit être en L.'});
+    else it.push({ok:false,t:'refais le calcul ρ = m / V avec m en g et V en L.'});
+    it.push(id===S.k?{ok:true,t:'l\'espèce chimique correspond à la table de référence.'}:{ok:false,t:'compare ta masse volumique aux valeurs de la table : laquelle est la plus proche ?'});
+    if(near(d,rho/1000,0.03)) it.push({ok:true,t:'d = ρ / ρ(eau) est bien appliquée, sans unité.'});
+    else if(near(d,rho,0.03)) it.push({ok:false,t:'la densité n\'a pas d\'unité : d = ρ / ρ(eau) = ρ / 1 000.'});
+    else it.push({ok:false,t:'refais d = ρ / ρ(eau), avec ρ(eau) = 1 000 g·L⁻¹.'});
+    show($('#fb1'),it);
+  };
+
+  $('#chk2').onclick=function(){
+    var O=params().S[st.sol],vi=num('#s_vi'),vf=num('#s_vf'),v=num('#s_v'),vl=num('#s_vl'),m=num('#s_m'),rho=num('#s_rho'),d=num('#s_d'),id=$('#s_id').value,it=[];
+    if(vi===null||vf===null||v===null||vl===null||m===null||rho===null||d===null||id===''){show($('#fb2'),[{ok:false,t:'Remplis toutes les cases avant de vérifier.'}]);return;}
+    it.push(Math.abs(vi-O.Vi)<=1?{ok:true,t:'ta lecture du niveau avant est cohérente.'}:{ok:false,t:'relis le niveau de l\'eau avant de plonger l\'objet, au bas du ménisque.'});
+    it.push(Math.abs(vf-O.Vf)<=1?{ok:true,t:'ta lecture du niveau après est cohérente.'}:{ok:false,t:'relis le niveau de l\'eau après avoir plongé l\'objet, au bas du ménisque.'});
+    it.push(Math.abs(v-(vf-vi))<=0.5?{ok:true,t:'le volume de l\'objet est bien la différence des deux niveaux : V = V(après) − V(avant).'}:{ok:false,t:'le volume de l\'objet est le volume d\'eau déplacé : V = V(après) − V(avant).'});
+    it.push(near(vl,v*1e-3,0.02)?{ok:true,t:'la conversion de mL en L est juste.'}:{ok:false,t:'conversion : 1 mL = 10⁻³ L, donc V (L) = V (mL) × 10⁻³.'});
+    it.push(Math.abs(m-O.m)<=0.3?{ok:true,t:'la masse de l\'objet est juste.'}:{ok:false,t:'relis la masse affichée par la balance pour l\'objet sec.'});
+    if(near(rho,m/vl,0.03)) it.push({ok:true,t:'ρ = m / V est bien appliquée, avec V en litres.'});
+    else if(near(rho,m/v,0.03)) it.push({ok:false,t:'tu as divisé par le volume en mL. Pour obtenir des g·L⁻¹, le volume doit être en L.'});
+    else if(near(rho,m/vf*1000,0.03)||near(rho,m/(vf*1e-3),0.03)) it.push({ok:false,t:'tu as utilisé le niveau final au lieu du volume de l\'objet. Le volume à utiliser est V(après) − V(avant).'});
+    else it.push({ok:false,t:'refais le calcul ρ = m / V avec m en g et V en L.'});
+    it.push(id===O.k?{ok:true,t:'l\'espèce chimique correspond à la table de référence.'}:{ok:false,t:'compare ta masse volumique aux valeurs de la table : laquelle est la plus proche ?'});
+    it.push(near(d,rho/1000,0.03)?{ok:true,t:'d = ρ / ρ(eau) est bien appliquée, sans unité.'}:{ok:false,t:'la densité n\'a pas d\'unité : d = ρ / ρ(eau) = ρ / 1 000.'});
+    show($('#fb2'),it);
+  };
+
+  var ART={ethanol:"l'éthanol",huile:"l'huile",eau:"l'eau",glycerol:'le glycérol'};
+  function miscible(a,b){return !(a==='huile'||b==='huile');}
+  $('#chk3a').onclick=function(){
+    var a=$('#x_a').value,b=$('#x_b').value,ph=$('#x_ph').value,ty=$('#x_ty').value,top=$('#x_top').value,it=[];
+    if(!a||!b||!ph||!ty||!top){show($('#fb3a'),[{ok:false,t:'Choisis deux liquides et fais les trois prédictions avant de tester.'}]);return;}
+    if(a===b){show($('#fb3a'),[{ok:false,t:'Choisis deux liquides différents : un mélange demande deux espèces chimiques différentes.'}]);return;}
+    var mis=miscible(a,b), heavy=SP[a].rho>SP[b].rho?a:b, light=heavy===a?b:a;
+    if(mis){
+      var layers=[{h:.55,c:'color-mix(in srgb, '+COL[a]+' 50%, '+COL[b]+' 50%)'}];
+      $('#stage3a').innerHTML=tube(layers);
+    } else {
+      $('#stage3a').innerHTML=tube([{h:.28,c:COL[heavy]},{h:.28,c:COL[light]}]);
+    }
+    it.push((ph==='1')===mis?{ok:true,t:mis?'une seule phase : les deux liquides se mélangent complètement.':'deux phases : les deux liquides ne se mélangent pas.'}:{ok:false,t:mis?'on observe une seule phase : '+ART[a]+' et '+ART[b]+' se mélangent complètement.':'on observe deux phases bien séparées : ces deux liquides ne se mélangent pas.'});
+    it.push((ty==='homogene')===mis?{ok:true,t:mis?'mélange homogène : une seule phase, aspect uniforme.':'mélange hétérogène : on voit une séparation nette entre les phases.'}:{ok:false,t:mis?'une seule phase d\'aspect uniforme : le mélange est homogène.':'on voit une séparation nette : le mélange est hétérogène.'});
+    if(mis){
+      it.push(top==='none'?{ok:true,t:'comme il n\'y a qu\'une seule phase, aucun liquide n\'est « en haut ».'}:{ok:false,t:'il n\'y a qu\'une seule phase : aucun liquide ne surnage.'});
+    } else {
+      var topKey=(light===a)?'a':'b';
+      it.push(top===topKey?{ok:true,t:SP[light].nom+' (ρ = '+fmt(SP[light].rho,0)+' g·L⁻¹) est moins dense que '+ART[heavy]+' (ρ = '+fmt(SP[heavy].rho,0)+' g·L⁻¹) : elle surnage.'}:{ok:false,t:'le liquide de plus petite masse volumique surnage : '+SP[light].nom+' ('+fmt(SP[light].rho,0)+' g·L⁻¹) est au-dessus de '+ART[heavy]+' ('+fmt(SP[heavy].rho,0)+' g·L⁻¹).'});
+    }
+    show($('#fb3a'),it);
+  };
+
+  $('#chk3b').onclick=function(){
+    var o=$('#y_o').value,l=$('#y_l').value,p=$('#y_p').value;
+    if(!o||!l||!p){show($('#fb3b'),[{ok:false,t:'Choisis un objet, un liquide et fais ta prédiction avant de plonger.'}]);return;}
+    var ro=SP[o].rho, rl=SP[l].rho, fl=ro<rl, sub=Math.min(1,ro/rl);
+    $('#stage3b').innerHTML=tube([{h:.72,c:COL[l]}],{c:OBJCOL[o],floats:fl,sub:sub,surf:.72});
+    var it=[];
+    it.push((p==='flotte')===fl?{ok:true,t:'bonne prédiction : '+(fl?'ρ('+SP[o].nom.toLowerCase()+') = '+fmt(ro,0)+' g·L⁻¹ est plus petite que ρ('+SP[l].nom.toLowerCase()+') = '+fmt(rl,0)+' g·L⁻¹, donc l\'objet flotte.':'ρ('+SP[o].nom.toLowerCase()+') = '+fmt(ro,0)+' g·L⁻¹ est plus grande que ρ('+SP[l].nom.toLowerCase()+') = '+fmt(rl,0)+' g·L⁻¹, donc l\'objet coule.')}:{ok:false,t:'compare les deux masses volumiques : ρ('+SP[o].nom.toLowerCase()+') = '+fmt(ro,0)+' g·L⁻¹ et ρ('+SP[l].nom.toLowerCase()+') = '+fmt(rl,0)+' g·L⁻¹. L\'objet '+(fl?'flotte':'coule')+' car il est '+(fl?'moins':'plus')+' dense que le liquide.'});
+    if(fl) it.push({ok:true,t:'environ '+fmt(sub*100,0)+' % de l\'objet est immergé : c\'est le rapport ρ(objet) / ρ(liquide).'});
+    if(o==='glace'&&l==='eau') it.push({ok:true,t:'l\'eau solide (917 g·L⁻¹) est moins dense que l\'eau liquide (1 000 g·L⁻¹) : la masse volumique dépend de l\'état physique.'});
+    show($('#fb3b'),it);
+  };
+
+  $('#chk4').onclick=function(){
+    var E=params().E[st.enq],vl=num('#e_vl'),rho=num('#e_rho'),d=num('#e_d'),nat=$('#e_nat').value,esp=$('#e_esp').value,it=[];
+    if(vl===null||rho===null||d===null||nat===''||esp===''){show($('#fb4'),[{ok:false,t:'Remplis toutes les cases avant de vérifier.'}]);return;}
+    it.push(near(vl,E.V*1e-3,0.02)?{ok:true,t:'la conversion de mL en L est juste.'}:{ok:false,t:'conversion : 1 mL = 10⁻³ L, donc V (L) = V (mL) × 10⁻³.'});
+    it.push(near(rho,E.m/(E.V*1e-3),0.03)?{ok:true,t:'ρ = m / V est bien appliquée, avec V en litres.'}:{ok:false,t:'refais le calcul ρ = m / V avec m en g et V en L.'});
+    it.push(near(d,rho/1000,0.03)?{ok:true,t:'d = ρ / ρ(eau) est bien appliquée, sans unité.'}:{ok:false,t:'la densité n\'a pas d\'unité : d = ρ / ρ(eau) = ρ / 1 000.'});
+    var pur=(E.k!=='eausalee');
+    it.push((nat==='pur')===pur?{ok:true,t:pur?'les deux propriétés mesurées (ρ et θéb) concordent avec une même espèce de la table : c\'est un corps pur.':'ni ρ ni θéb ne correspondent à une espèce de la table : c\'est un mélange.'}:{ok:false,t:pur?'ρ et θéb concordent tous les deux avec une même espèce de la table : c\'est un corps pur.':'compare ρ et θéb à la table : aucune espèce ne correspond aux deux. Un corps pur a des propriétés bien définies, donc c\'est un mélange.'});
+    var want=pur?E.k:'aucune';
+    it.push(esp===want?{ok:true,t:pur?'identification juste : il faut plusieurs propriétés concordantes pour conclure.':'aucune espèce du tableau ne correspond : on ne peut pas donner un nom de corps pur.'}:{ok:false,t:pur?'cherche l\'espèce dont la masse volumique et la température d\'ébullition correspondent toutes les deux.':'une masse volumique proche de celle de l\'eau ne suffit pas : la température d\'ébullition ne correspond pas non plus, donc rien ne correspond dans la table.'});
+    show($('#fb4'),it);
+  };
+
+  // ---------- solution pour le professeur : ajouter #prof à l'adresse ----------
+  function renderProf(){
+    var el=$('#prof');
+    if(location.hash!=='#prof'){el.hidden=true;return;}
+    var P=params(),nm=$('#prenom').value.trim()||'valeurs d\'exemple',h='<h2>Solution (mode professeur) : '+nm+'</h2>';
+    ['A','B','C'].forEach(function(n,i){var S=P.L[i],r=Math.round(S.mliq/(S.V*1e-3));
+      h+='<p><b>Liquide '+n+'</b> : V = '+S.V+' mL = '+S.V+' × 10⁻³ L = '+fmt(S.V*1e-3,3)+' L ; m = '+fmt(S.mtot,1)+' − '+fmt(S.mvide,1)+' = '+fmt(S.mliq,1)+' g ; ρ = '+fmt(S.mliq,1)+' / '+fmt(S.V*1e-3,3)+' ≈ '+fmt(r,0)+' g·L⁻¹ : '+SP[S.k].nom.toLowerCase()+' ; d = '+fmt(r,0)+' / 1 000 ≈ '+fmt(r/1000,2)+'.</p>';});
+    P.S.forEach(function(O,i){var r=Math.round(O.m/(O.Vo*1e-3));
+      h+='<p><b>Objet '+(i+1)+'</b> : Vavant = '+O.Vi+' mL, Vaprès = '+O.Vf+' mL ; V = '+O.Vf+' − '+O.Vi+' = '+O.Vo+' mL = '+fmt(O.Vo*1e-3,3)+' L ; m = '+fmt(O.m,1)+' g ; ρ = '+fmt(O.m,1)+' / '+fmt(O.Vo*1e-3,3)+' ≈ '+fmt(r,0)+' g·L⁻¹ : '+SP[O.k].nom.toLowerCase()+' ; d ≈ '+fmt(r/1000,2)+'.</p>';});
+    P.E.forEach(function(E){var r=Math.round(E.m/(E.V*1e-3));var nm2=E.k==='eausalee'?'mélange (eau salée) : ρ et θéb ne correspondent à aucune espèce du tableau':'corps pur : '+SP[E.k].nom.toLowerCase()+' (ρ et θéb concordent)';
+      h+='<p><b>'+E.lab+'</b> : V = '+fmt(E.V,0)+' mL = 0,100 L ; ρ = '+fmt(E.m,1)+' / 0,100 = '+fmt(r,0)+' g·L⁻¹ ; d = '+fmt(r/1000,2)+' ; θéb = '+E.teb+' °C : '+nm2+'.</p>';});
+    h+='<p><b>Mélanges :</b> eau, éthanol et glycérol entre eux : 1 phase, mélange homogène. Huile avec un autre liquide : 2 phases, mélange hétérogène ; l\'huile (920 g·L⁻¹) surnage sur l\'eau et sur le glycérol, mais se trouve sous l\'éthanol (789 g·L⁻¹). <b>Flottaison :</b> la glace (917 g·L⁻¹) flotte sur l\'eau et sur le glycérol, et coule dans l\'éthanol. L\'aluminium, le cuivre et le plomb coulent dans les trois liquides.</p>';
+    el.hidden=false;el.innerHTML=h;
+  }
+  window.addEventListener('hashchange',renderProf);
+
+  lcd($('#lcd1'),null);lcd($('#lcd2'),null);
+  render();
+})();
+</script>
